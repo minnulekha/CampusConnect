@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FacultyConnect{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 font-sans text-gray-900 flex flex-col min-h-screen">
+
+    <nav class="bg-indigo-600 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <a href="{% url 'faculty:search' %}" class="text-xl font-bold tracking-tight">🎓 FacultyConnect</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="{% url 'faculty:search' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition">Find Faculty</a>
+                    <a href="{% url 'community:notifications' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition">🔔 Inbox</a>
+                    <a href="{% url 'campus:map' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition">🗺️ Campus Map</a>
+                    {% if user.is_authenticated %}
+                        {% if user.role == 'faculty' %}
+                            <a href="{% url 'location:dashboard' %}" class="px-3 py-2 rounded-md text-sm font-medium bg-indigo-700 hover:bg-indigo-800 transition">⚙️ Faculty Dashboard</a>
+                        {% endif %}
+                        <span class="text-sm text-indigo-200">Hello, {{ user.username }}</span>
+                        
+                        <form method="POST" action="{% url 'logout' %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition">Log Out</button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition">Log In</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer class="bg-white border-t border-gray-200 py-4 text-center text-sm text-gray-500">
+        &copy; 2026 FacultyConnect — Hackathon Prototype
+    </footer>
+
+</body>
+</html>

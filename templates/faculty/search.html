@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}Find Faculty - FacultyConnect{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="md:flex md:items-center md:justify-between">
+        <div class="flex-1 min-w-0">
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">Faculty Directory</h2>
+            <p class="text-sm text-gray-500 mt-1">Search and view real-time status of university faculty.</p>
+        </div>
+    </div>
+
+    <form method="GET" action="" class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+            <label class="block text-xs font-medium text-gray-700 uppercase tracking-wider mb-1">Search Name</label>
+            <input type="text" name="q" value="{{ query }}" placeholder="e.g., Ananya" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-700 uppercase tracking-wider mb-1">Department</label>
+            <select name="department" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border">
+                <option value="">All Departments</option>
+                {% for dept in departments %}
+                    <option value="{{ dept.id }}" {% if selected_dept == dept.id|stringformat:"i" %}selected{% endif %}>{{ dept.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-700 uppercase tracking-wider mb-1">Availability</label>
+            <select name="status" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border">
+                <option value="">Any Status</option>
+                <option value="available" {% if selected_status == 'available' %}selected{% endif %}>🟢 Available</option>
+                <option value="busy" {% if selected_status == 'busy' %}selected{% endif %}>🔴 Busy</option>
+                <option value="in_class" {% if selected_status == 'in_class' %}selected{% endif %}>🔵 In Class</option>
+                <option value="offline" {% if selected_status == 'offline' %}selected{% endif %}>⚪ Offline</option>
+            </select>
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition text-sm">Filter Results</button>
+        </div>
+    </form>
+
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {% for faculty in faculty_list %}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col justify-between p-6">
+                <div>
+                    <div class="flex items-center justify-between">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                            {% if faculty.availability == 'available' %}bg-green-100 text-green-800
+                            {% elif faculty.availability == 'busy' or faculty.availability == 'in_class' %}bg-red-100 text-red-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ faculty.get_availability_display }}
+                        </span>
+                        <span class="text-xs text-gray-500 font-semibold uppercase">{{ faculty.department.code }}</span>
+                    </div>
+                    <h3 class="mt-4 text-lg font-bold text-gray-900">Dr. {{ faculty.user.first_name }} {{ faculty.user.last_name }}</h3>
+                    <p class="text-sm text-gray-500">{{ faculty.designation }}</p>
+                </div>
+                <div class="mt-6">
+                    <a href="{% url 'faculty:profile' faculty.id %}" class="w-full block text-center bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium py-2 px-4 border border-gray-300 rounded-md transition text-sm">View Profile & Live Map</a>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-span-full bg-white text-center p-12 rounded-lg border border-gray-200 text-gray-500">
+                No faculty members found matching your search.
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

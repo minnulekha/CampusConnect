@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+{% block title %}Interactive Campus Map{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+    <div class="md:flex md:items-center md:justify-between">
+        <div class="flex-1 min-w-0">
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">Campus Navigator</h2>
+            <p class="text-sm text-gray-500 mt-1">Find the fastest walking route between campus facilities.</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-fit space-y-6">
+            <h3 class="text-lg font-bold text-gray-900 border-b pb-2">Route Calculator</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Starting Point</label>
+                    <select id="startNode" class="w-full text-sm border-gray-300 rounded-md shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="gate">Main Gate</option>
+                        <option value="admin">Admin Block</option>
+                        <option value="academic">Academic Block</option>
+                        <option value="library">Central Library</option>
+                        <option value="canteen">Canteen</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Destination</label>
+                    <select id="endNode" class="w-full text-sm border-gray-300 rounded-md shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="academic">Academic Block</option>
+                        <option value="gate">Main Gate</option>
+                        <option value="admin">Admin Block</option>
+                        <option value="library">Central Library</option>
+                        <option value="canteen">Canteen</option>
+                    </select>
+                </div>
+                <button onclick="calculateRoute()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-md text-sm transition shadow-sm">
+                    Find Route
+                </button>
+            </div>
+
+            <div id="routeResult" class="hidden mt-4 p-4 bg-indigo-50 rounded-lg border border-indigo-100 space-y-1">
+                <span class="block text-xs uppercase tracking-wider text-indigo-500 font-bold">Estimated Walk</span>
+                <span id="timeResult" class="text-2xl font-extrabold text-indigo-900"></span>
+                <p id="pathText" class="text-xs text-indigo-700 font-medium mt-2"></p>
+            </div>
+        </div>
+
+        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative" style="height: 500px;">
+            <svg viewBox="0 0 800 500" class="w-full h-full bg-gray-50">
+                <defs>
+                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e5e7eb" stroke-width="1"/>
+                    </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+
+                <g id="edges" stroke="#d1d5db" stroke-width="4" stroke-linecap="round">
+                    <line id="edge-gate-admin" x1="100" y1="400" x2="150" y2="200" />
+                    <line id="edge-gate-academic" x1="100" y1="400" x2="400" y2="350" />
+                    <line id="edge-admin-library" x1="150" y1="200" x2="450" y2="150" />
+                    <line id="edge-academic-library" x1="400" y1="350" x2="450" y2="150" />
+                    <line id="edge-academic-canteen" x1="400" y1="350" x2="650" y2="400" />
+                    <line id="edge-library-canteen" x1="450" y1="150" x2="650" y2="400" />
+                </g>
+
+                <g id="nodes">
+                    <circle cx="100" cy="400" r="16" fill="#4f46e5" stroke="#fff" stroke-width="3"/>
+                    <text x="100" y="430" text-anchor="middle" class="text-xs font-bold fill-gray-700">Main Gate</text>
+
+                    <rect x="110" y="170" width="80" height="60" rx="8" fill="#ec4899" stroke="#fff" stroke-width="3"/>
+                    <text x="150" y="160" text-anchor="middle" class="text-xs font-bold fill-gray-700">Admin Block</text>
+
+                    <rect x="340" y="320" width="120" height="80" rx="8" fill="#3b82f6" stroke="#fff" stroke-width="3"/>
+                    <text x="400" y="310" text-anchor="middle" class="text-xs font-bold fill-gray-700">Academic Block</text>
+
+                    <circle cx="450" cy="150" r="30" fill="#eab308" stroke="#fff" stroke-width="3"/>
+                    <text x="450" y="110" text-anchor="middle" class="text-xs font-bold fill-gray-700">Library</text>
+
+                    <polygon points="650,370 680,410 620,410" fill="#10b981" stroke="#fff" stroke-width="3"/>
+                    <text x="650" y="430" text-anchor="middle" class="text-xs font-bold fill-gray-700">Canteen</text>
+                </g>
+            </svg>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Define the Campus Graph (Distances in meters)
+    const graph = {
+        'gate': { 'admin': 200, 'academic': 300 },
+        'admin': { 'gate': 200, 'library': 150 },
+        'academic': { 'gate': 300, 'library': 250, 'canteen': 100 },
+        'library': { 'admin': 150, 'academic': 250, 'canteen': 350 },
+        'canteen': { 'academic': 100, 'library': 350 }
+    };
+
+    const locationNames = {
+        'gate': 'Main Gate', 'admin': 'Admin Block', 
+        'academic': 'Academic Block', 'library': 'Central Library', 'canteen': 'Canteen'
+    };
+
+    function dijkstra(graph, start, end) {
+        let distances = {};
+        let prev = {};
+        let pq = new Set(Object.keys(graph));
+
+        for (let node of pq) {
+            distances[node] = Infinity;
+            prev[node] = null;
+        }
+        distances[start] = 0;
+
+        while (pq.size > 0) {
+            let currNode = null;
+            for (let node of pq) {
+                if (currNode === null || distances[node] < distances[currNode]) {
+                    currNode = node;
+                }
+            }
+
+            if (currNode === end) break;
+            pq.delete(currNode);
+
+            for (let neighbor in graph[currNode]) {
+                let alt = distances[currNode] + graph[currNode][neighbor];
+                if (alt < distances[neighbor]) {
+                    distances[neighbor] = alt;
+                    prev[neighbor] = currNode;
+                }
+            }
+        }
+
+        let path = [];
+        let u = end;
+        while (prev[u]) {
+            path.unshift(u);
+            u = prev[u];
+        }
+        if (path.length > 0) path.unshift(start);
+        return { path, distance: distances[end] };
+    }
+
+    function calculateRoute() {
+        const start = document.getElementById('startNode').value;
+        const end = document.getElementById('endNode').value;
+
+        // Reset all paths to gray
+        document.querySelectorAll('#edges line').forEach(line => {
+            line.setAttribute('stroke', '#d1d5db');
+            line.setAttribute('stroke-width', '4');
+        });
+
+        if (start === end) {
+            alert("Starting point and destination are the same!");
+            return;
+        }
+
+        const result = dijkstra(graph, start, end);
+        
+        // Highlight active path lines
+        for (let i = 0; i < result.path.length - 1; i++) {
+            let n1 = result.path[i];
+            let n2 = result.path[i+1];
+            // Check both string combinations for the edge ID
+            let edge = document.getElementById(`edge-${n1}-${n2}`) || document.getElementById(`edge-${n2}-${n1}`);
+            if (edge) {
+                edge.setAttribute('stroke', '#4f46e5'); // Indigo bold
+                edge.setAttribute('stroke-width', '8');
+            }
+        }
+
+        // Show Results
+        const walkingSpeedMetersPerMinute = 80;
+        const mins = Math.ceil(result.distance / walkingSpeedMetersPerMinute);
+        
+        const pathString = result.path.map(n => locationNames[n]).join(' ➔ ');
+        
+        document.getElementById('routeResult').classList.remove('hidden');
+        document.getElementById('timeResult').innerText = `~${mins} mins walk (${result.distance}m)`;
+        document.getElementById('pathText').innerText = pathString;
+    }
+</script>
+{% endblock %}
