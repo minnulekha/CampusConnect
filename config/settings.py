@@ -13,7 +13,7 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
+CSRF_TRUSTED_ORIGINS = ['https://*.onrender.com', 'https://*.railway.app']
 # --- SECURITY & ENVIRONMENT CONFIG ---
 
 # Pull key safely from environment variable, fallback to development string only if empty
